@@ -7,17 +7,18 @@ import torchvision
 import torchvision.datasets
 from torchvision import transforms
 from torch.utils.data import Dataset
-import config as cfg 
+
+from .sampler import ClassAwareSampler
 
 
 class LT_Dataset(Dataset):
-    num_classes = cfg.num_classes
+    num_classes = 8142
 
     def __init__(self, root, txt, transform=None):
         self.img_path = []
         self.targets = []
         self.transform = transform
-        with open(root+txt) as f:
+        with open(txt) as f:
             for line in f:
                 self.img_path.append(os.path.join(root, line.split()[0]))
                 self.targets.append(int(line.split()[1]))
@@ -39,6 +40,7 @@ class LT_Dataset(Dataset):
 
         self.cls_num_list = [np.sum(np.array(self.targets)==i) for i in range(self.num_classes)]
 
+
     def __len__(self):
         return len(self.targets)
 
@@ -51,23 +53,23 @@ class LT_Dataset(Dataset):
         if self.transform is not None:
             sample = self.transform(sample)
         return sample, target 
+    
 
 
 class LT_Dataset_Eval(Dataset):
-    num_classes = cfg.num_classes
+    num_classes = 8142
 
     def __init__(self, root, txt, class_map, transform=None):
         self.img_path = []
         self.targets = []
         self.transform = transform
         self.class_map = class_map
-        with open(root+txt) as f:
+        with open(txt) as f:
             for line in f:
                 self.img_path.append(os.path.join(root, line.split()[0]))
                 self.targets.append(int(line.split()[1]))
 
         self.targets = np.array(self.class_map)[self.targets].tolist()
-        self.cls_num_list = [np.sum(np.array(self.targets)==i) for i in range(self.num_classes)]
 
     def __len__(self):
         return len(self.targets)
@@ -83,10 +85,10 @@ class LT_Dataset_Eval(Dataset):
         return sample, target 
 
 
-class Food_LT(object):
-    def __init__(self, distributed, root="", batch_size=60, num_works=40, test_batch_size=300):
+class iNa2018(object):
+    def __init__(self, distributed, root="", batch_size=60, num_works=40):
         
-        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        normalize = transforms.Normalize(mean=[0.466, 0.471, 0.380], std=[0.195, 0.194, 0.192])
         
         transform_train = transforms.Compose([
             transforms.RandomResizedCrop(224),
@@ -95,6 +97,7 @@ class Food_LT(object):
             transforms.ToTensor(),
             normalize,
             ])
+        
 
         transform_test = transforms.Compose([
                 transforms.Resize(256),
@@ -102,35 +105,28 @@ class Food_LT(object):
                 transforms.ToTensor(),
                 normalize,
             ])
-        
-        ''' change to your index path '''
-        train_txt = "data/food/train.txt"
-        eval_txt = "data/food/val.txt"
-        test_txt = "data/food/test.txt"
+
+        train_txt = "./datasets/data_txt/iNaturalist18_train.txt"
+        eval_txt = "./datasets/data_txt/iNaturalist18_val.txt"
         
         train_dataset = LT_Dataset(root, train_txt, transform=transform_train)
         eval_dataset = LT_Dataset_Eval(root, eval_txt, transform=transform_test, class_map=train_dataset.class_map)
-        test_dataset = LT_Dataset_Eval(root, test_txt, transform=transform_test, class_map=train_dataset.class_map)
         
         self.cls_num_list = train_dataset.cls_num_list
-        self.val_num_list = eval_dataset.cls_num_list
-        self.test_num_list = test_dataset.cls_num_list
 
         self.dist_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset) if distributed else None
         self.train_instance = torch.utils.data.DataLoader(
             train_dataset,
             batch_size=batch_size, shuffle=True,
-            num_workers=num_works, pin_memory=False, sampler=self.dist_sampler)
+            num_workers=num_works, pin_memory=True, sampler=self.dist_sampler)
+
+        balance_sampler = ClassAwareSampler(train_dataset)
+        self.train_balance = torch.utils.data.DataLoader(
+            train_dataset,
+            batch_size=batch_size, shuffle=False,
+            num_workers=num_works, pin_memory=True, sampler=balance_sampler)
 
         self.eval = torch.utils.data.DataLoader(
             eval_dataset,
             batch_size=batch_size, shuffle=False,
-            num_workers=num_works, pin_memory=False)
-        
-        self.test = torch.utils.data.DataLoader(
-            test_dataset,
-            batch_size=test_batch_size, shuffle=False,
-            num_workers=num_works, pin_memory=False)
-        self.test_names = test_dataset.img_path
-        
-        
+            num_workers=num_works, pin_memory=True)
