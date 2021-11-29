@@ -1,0 +1,1 @@
+find -name 'sub*.txt' | tar -zcvf sub.tar.gz -T -

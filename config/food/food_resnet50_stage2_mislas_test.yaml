@@ -1,4 +1,4 @@
-name: food_resnet50_stage1_mixup
+name: food_resnet50_stage2_mislas_test
 print_freq: 100
 workers: 48
 log_dir: 'logs'
@@ -35,15 +35,18 @@ multiprocessing_distributed: False
 
 
 # Train
-mode: 'stage1'
+mode: 'stage2'
+smooth_head: 0.3
+smooth_tail: 0.0
+shift_bn: True
+lr_factor: 0.05
 lr: 0.1
-batch_size: 64
+batch_size: 256
 weight_decay: 5e-4
-num_epochs: 200
+num_epochs: 50
 momentum: 0.9
-cos: False
-mixup: True
-alpha: 1.0
+mixup: False
+alpha: null
 
 
 

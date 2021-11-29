@@ -1,4 +1,4 @@
-name: food_resnet50_stage1_mixup_cos
+name: food_resnet50_stage1_mixup_test
 print_freq: 100
 workers: 48
 log_dir: 'logs'
@@ -37,13 +37,13 @@ multiprocessing_distributed: False
 # Train
 mode: 'stage1'
 lr: 0.1
-batch_size: 64
+batch_size: 256
 weight_decay: 5e-4
-num_epochs: 200
+num_epochs: 180
 momentum: 0.9
 cos: True
 mixup: True
-alpha: 1.0
+alpha: 0.2
 
 
 

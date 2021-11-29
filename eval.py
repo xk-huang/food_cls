@@ -319,7 +319,7 @@ def validate(val_loader, model, classifier, lws_model, criterion, config, logger
         import os.path as osp
         now = datetime.now()
         dt_string = now.strftime("%d-%m-%Y_%H-%M-%S")
-        with open('saved/' + f'submission.{dt_string}.txt', 'w') as f:
+        with open(osp.dirname(osp.dirname(config.resume)) + f'/submission.{dt_string}.txt', 'w') as f:
             f.write('Id,Expected\n')
             for i, j in zip(test_names, all_outputs):
                 f.write(f'{osp.basename(i)},{j}\n')
